@@ -20,7 +20,7 @@ class A():
         self.df1 = pl.DataFrame()   #df of ranked catalognumber
         self.count = 0
         self.lvl= 'Region'
-        self.cat = []
+        #self.cat = []
 a=A()
 a.fdf=a.fdf.with_columns(pl.col('Date').str.to_date('%Y-%m-%d'))
 
@@ -47,7 +47,6 @@ def gbd1(e,df=df):
     df1=df1.filter(pl.col('SALES_DATE')<=datetime(today.year,today.month,1)+relativedelta(months=12))
     a.cdf=df1.filter((pl.col('SALES_DATE')>=datetime(today.year,today.month,1)-relativedelta(months=12)) & (pl.col('SALES_DATE')<=datetime(today.year,today.month,1)+relativedelta(months=12)))
     a.cdf=a.cdf.group_by('CatalogNumber').sum().sort(by='actwfc',descending=True)
-    #print(a.cdf)
     a.df1=df1
     a.df=df
 
@@ -106,7 +105,10 @@ def pf(e):
     ic.value = a.count
 
 with r1:
-    ic = ui.number(label="Rank",step=1,on_change=rdf).style('width: 50px; margin-top:-14px')
+    with ui.button(icon='menu'):
+        with ui.menu() as menu:
+            ui.menu_item("Pull Data",lambda: ui.navigate.to('/sql'))
+    ic = ui.number(label="Rank",step=1,on_change=rdf).style('min-width: 50px; margin-top:-14px')
     prev = ui.button(icon='arrow_drop_up',text='Prev',on_click=pf)
     next = ui.button(icon='arrow_drop_down',text='Next',on_click=nf)
     lw= ui.select(label='Location',value='Region',options=['Area','Region','Country'],on_change=tmf).style('min-width: 140px; margin-top:-14px')
@@ -129,7 +131,51 @@ def edf(e):
     #a.fdf=a.fdf.with_columns((pl.col('Date').dt.date()).alias('Date'))
     a.fdf.write_excel('C:\\Users\\smishra14\\OneDrive - Stryker\\data\\over.xlsx')
     #a.fdf['Date']=pl.to_datetime(a.fdf['Date'])
-
 eb.on_click(edf)
 
+@ui.page('/sql')
+def sql():
+    from sql import sqlpd
+    import os
+    class B():
+        def __init__(self): 
+            self.loc = ''
+            self.reg = ''
+            self.fr = ''
+    b=B()
+    with ui.row():
+        sd=ui.select(label="Select Division",options=['APAC','EUROPE','Instruments','Trauma and Extremities','CMF','Medical']).style('min-width:210px; margin-top:-14px')
+        nm=ui.select(label="Months",options=['-2','-36','-4'],value='-2').style('min-width:100px; margin-top:-14px')
+        pb=ui.button(text='Pull Data')
+        sb=ui.button(text='Save Data')
+        sb.set_visibility(False)
+    def selc(e):
+        print(sd.value)
+        match e.value:
+            case "APAC":
+                b.loc = "StrykerGroupRegion"
+                b.reg=e.value
+                b.fr = "'CMF','Endoscopy','Instruments','Joint Replacement','Spine','Trauma and Extremities'"
+            case "EUROPE":
+                b.loc = "StrykerGroupRegion"
+                b.reg=e.value
+                b.fr = "'CMF','Endoscopy','Instruments','Joint Replacement','Spine','Trauma and Extremities','Medical'"
+            case "Instruments" | "Trauma and Extremities" | "CMF" | "Medical":
+                b.loc = "Country"
+                b.reg="UNITED STATES"
+                b.fr = f"{e.value}"
+    sd.on_value_change(selc)
+    async def ssf(e):
+        df= await sqlpd(b.loc,b.reg,sd.value,b.fr,int(nm.value))
+        #print(df.columns)
+        ch3=ui.echart({'xAxis':{'data':df['SALES_DATE'].unique().sort().to_list()},'yAxis': {},'series':[{'type': 'bar', 'data': df.group_by('SALES_DATE').sum().sort('SALES_DATE')['`Act Orders Rev'].to_list()}
+                                                                                         ,{'type': 'bar', 'data': df.group_by('SALES_DATE').sum().sort('SALES_DATE')['`Fcst Stat Final Rev'].to_list()}]}).style('height:390px;width:950px; margin-top:3px')
+        ch3.options['tooltip']={}
+        ch3.options['legend']={}
+        sb.set_visibility(True)
+    def sdf(e):
+        os.rename(f'C:\\Users\\smishra14\\OneDrive - Stryker\\data\\{sd.value}.parquet',f'C:\\Users\\smishra14\\OneDrive - Stryker\\data\\Envision\\{sd.value+"-"+today.strftime('%d%m%y')}.parquet')
+        df.write_parquet(f'C:\\Users\\smishra14\\OneDrive - Stryker\\data\\{sd.value}.parquet')
+    pb.on_click(ssf)
+    sb.on_click(sdf)
 ui.run(title="Forecast Review",binding_refresh_interval=1,reconnect_timeout=70,uvicorn_reload_includes='ngbrp.py')
