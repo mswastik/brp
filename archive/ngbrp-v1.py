@@ -20,9 +20,9 @@ class A():
         self.df1 = pl.DataFrame()   #df of ranked catalognumber
         self.count = 0
         self.lvl= 'Region'
-        self.cat = ''
+        #self.cat = []
 a=A()
-#a.fdf=a.fdf.with_columns(pl.col('Date').str.to_date('%Y-%m-%d'))
+a.fdf=a.fdf.with_columns(pl.col('Date').str.to_date('%Y-%m-%d'))
 
 navcl='w-24 drop-shadow-none shadow-none text-[#FFF] hover:font-black hover:bg-[#FFF] hover:text-[#000] rounded-none transition-all duration-200 ease-linear'
 def nav():
@@ -60,7 +60,6 @@ def gbd1(e,df=df):
     #a.cdf=df1.filter((pl.col('SALES_DATE')>=datetime(today.year,today.month,1)-relativedelta(months=12)) & (pl.col('SALES_DATE')<=datetime(today.year,today.month,1)+relativedelta(months=12)))
     a.cdf=df1.filter(pl.col('SALES_DATE')>=datetime(today.year,today.month,1)-relativedelta(months=12))
     a.cdf=a.cdf.group_by('CatalogNumber').sum().sort(by='actwfc',descending=True)
-    a.cdf=a.cdf.with_row_index()
     a.df1=df1
     a.df=df
 
@@ -76,9 +75,11 @@ r1=ui.row()
 r2=ui.row()
 r3=ui.row()
 
-def rdf1(cat:str):
-    #print(cat)
-    lab.text = str(a.cat) + " - " + a.df.filter(pl.col('CatalogNumber')==cat)['Franchise'].unique()[0]
+def rdf(e):
+    a.count = int(ic.value)
+    cat=a.cdf['CatalogNumber'][a.count]
+    lab.text = str(a.count) + " - " + cat + " - " + cow.value + " - " + a.df.filter(pl.col('CatalogNumber')==cat)['IBP Level 5'].unique()[0] + " - " + a.df.filter(
+                                                                                                    pl.col('CatalogNumber')==cat)['Franchise'].unique()[0]
     a.gdf=a.df1.filter(pl.col('CatalogNumber')==cat)
     a.gdf=a.gdf.group_by(['month','year','SALES_DATE']).sum()
     #print(a.gdf)
@@ -113,51 +114,40 @@ def rdf1(cat:str):
             k+=1
         #a.ch1.update()
 
-def rdf(e):
-    a.count = int(ic.value)
-    #a.cat=a.cdf['CatalogNumber'][a.count]
-    a.cat=a.cdf.filter(pl.col('index')==a.count)['CatalogNumber'].to_list()[0]
-    rdf1(a.cat)
-    #ic.value = a.count
-    catw.value=a.cat
-
-def scat(e):
-    a.cat=e.value
-    a.count=a.cdf.filter(pl.col('CatalogNumber')==a.cat)['index'].to_list()[0]
-    ic.value = a.count
-    #print(a.count)
-    rdf1(a.cat)
-
 def nf(e):
     a.count += 1
     ic.value = a.count
-    a.cat=a.cdf.filter(pl.col('index')==a.count)['CatalogNumber'].to_list()[0]
-    rdf1(a.cat)
 def pf(e):
     a.count -= 1
     ic.value = a.count
-    a.cat=a.cdf.filter(pl.col('index')==a.count)['CatalogNumber'].to_list()[0]
-    rdf1(a.cat)
 
 with r1:
-    ic = ui.number(label="Rank",step=1,value=0,on_change=rdf).style('min-width: 60px;max-width: 60px; margin-top:-14px')
+    #with ui.button(icon='menu'):
+    #    with ui.menu() as menu:
+    #        ui.menu_item("Pull Data",lambda: ui.navigate.to('/sql'))
+    ic = ui.number(label="Rank",step=1,on_change=rdf).style('min-width: 60px;max-width: 60px; margin-top:-14px')
     prev = ui.button(icon='arrow_drop_up',text='Prev',on_click=pf)
     next = ui.button(icon='arrow_drop_down',text='Next',on_click=nf)
-    lw = ui.select(label='Location',value='Region',options=['Area','Region','Country'],on_change=tmf).style('min-width: 140px; margin-top:-14px')
-    cow = ui.select(label=lw.value,options=list(df[lw.value].unique()),on_change=gbd1).style('min-width: 160px; margin-top:-14px')
-    eb = ui.button(text="Export",icon='file_download')
-    catw = ui.select(label="CatalogNumber",options=list(df['CatalogNumber'].unique()),on_change=scat,with_input=True).style('min-width: 160px; margin-top:-14px')
-    lab = ui.label("        ").style('font-size:1.5em;width: 350px; margin-top:3px')
+    lw= ui.select(label='Location',value='Region',options=['Area','Region','Country'],on_change=tmf).style('min-width: 140px; margin-top:-14px')
+    cow= ui.select(label=lw.value,options=list(df[lw.value].unique()),on_change=gbd1).style('min-width: 160px; margin-top:-14px')
+    eb=ui.button(text="Export",icon='file_download')
+    lab = ui.label("        ").style('font-size:1.5em;width: 650px; margin-top:3px')
 #gbd1(e=lw)
 
 def scf(e):
-    t={'Date':[date.today()],'Rank':[a.count],'CatalogNumber':a.cat,'Country':[cow.value],'Stat fcst':[e.args["newValue"]],
-       'month':[int(e.args["colId"])],'year':[a.pdf['year'][e.args["rowIndex"]]],'old fcst':[e.args["oldValue"]],'Franchise':[a.df.filter(pl.col('CatalogNumber')==a.cat)['Franchise'].unique()[0]]}
-    a.fdf=pl.concat([a.fdf,pl.DataFrame(t)],how='vertical_relaxed')
+    t={'Date':[date.today()],'Rank':[a.count],'CatalogNumber':[a.df1['CatalogNumber'][a.count]],'Country':[cow.value],'Stat fcst':[e.args["newValue"]],
+       'month':[int(e.args["colId"])],'year':[a.pdf['year'][e.args["rowIndex"]]],'old fcst':[e.args["oldValue"]]}
+    a.fdf=pl.concat([a.fdf,pl.DataFrame(t)])
+
+#def cf1(e):
+#    a.count = int(ic.value)
+#ic.on_value_change(cf1)
 
 def edf(e):
+    #a.fdf['Date']=pl.to_datetime(a.fdf['Date'])
+    #a.fdf=a.fdf.with_columns((pl.col('Date').dt.date()).alias('Date'))
     a.fdf.write_excel('C:\\Users\\smishra14\\OneDrive - Stryker\\data\\over.xlsx')
-    ui.notify("Data Exported",type='positive')
+    #a.fdf['Date']=pl.to_datetime(a.fdf['Date'])
 eb.on_click(edf)
 
 @ui.page('/sql')
@@ -210,25 +200,16 @@ def sql():
 @ui.page('/detail')
 def detail():
     nav()
-    dr1=ui.row()
-    dr2=ui.row()
     def cfg(e):
-        ddf=df.filter(pl.col(lw.value)==cow.value)
-        ddf=ddf.filter(pl.col('SALES_DATE')==datetime.strptime(date.value,"%Y-%m-%d"))
-        ddf=ddf.group_by([lw.value,'IBP Level 5','Franchise','CatalogNumber','SALES_DATE']).sum()
-        ddf=ddf.with_columns(pl.col('`Fcst Stat Final Rev').cast(pl.Int64))
-        ddf=ddf.with_columns((pl.col('`Fcst Stat Final Rev')-pl.col('`Act Orders Rev')).abs().alias('Diff Act'))
-        ddf=ddf.with_columns((pl.col('`Fcst Stat Final Rev')-pl.col('`Fcst DF Final Rev')).abs().alias('Diff Fcst')).sort('Diff Fcst',descending=True)
-        ddf=ddf[[lw.value,'Franchise','CatalogNumber','SALES_DATE','`Fcst Stat Final Rev','`Fcst DF Final Rev','Diff Fcst','`Act Orders Rev','Diff Act']]
-        dr2.clear()
-        with dr2:
-            dgr=ui.aggrid({'columnDefs': [{"field":cn,"editable": True,"filter":True, "sortable": True,"floatingFilter":True} for cn in ddf.columns], 'rowData': ddf.to_dicts()}).style('min-width:950px;min-height:1100px;margin-top:-5px')   
-       
-    with dr1:
+        ddf=df.filter(pl.col(lw.value)==e.value)
+        ddf=ddf.group_by([lw.value,'IBP Level 5','CatalogNumber','SALES_DATE']).sum()
+        ddf=ddf.with_columns((pl.col('`Fcst Stat Final Rev')-pl.col('`Fcst DF Final Rev')).alias('Diff'))
+        ddf=ddf[[lw.value,'CatalogNumber','SALES_DATE','`Fcst Stat Final Rev','`Fcst DF Final Rev','Diff']]
+        ui.aggrid({'columnDefs': [{"field":cn,"editable": True} for cn in ddf.columns], 'rowData': ddf.to_dicts()}).on('cellValueChanged', lambda e: scf(e)
+                                                                                                                ).style('min-width:750px;max-height:800px;margin-top:-15px')   
+    with ui.row():
         lw= ui.select(label='Location',value='Region',options=['Area','Region','Country'],on_change=tmf).style('min-width: 140px; margin-top:-14px')
-        with ui.input('Date',value=(datetime(today.year,today.month,1)+relativedelta(months=2)).strftime("%Y-%m-%d"),on_change=cfg).style('min-width: 140px; margin-top:-14px') as date:
-            with ui.menu().style('min-width: 160px;'):
-                ui.date(datetime(today.year,today.month,1)-relativedelta(months=1)).bind_value(date)
-        cow= ui.select(label=lw.value,options=list(df[lw.value].unique().sort()),on_change=cfg,with_input=True).style('min-width: 160px; margin-top:-14px')
+        cow= ui.select(label=lw.value,options=list(df[lw.value].unique()),on_change=cfg).style('min-width: 160px; margin-top:-14px')
+    
 
 ui.run(title="Forecast Review",binding_refresh_interval=1,reconnect_timeout=70,uvicorn_reload_includes='ngbrp.py')
