@@ -35,21 +35,35 @@ def nav():
             ui.button('SQL',color=None).classes(navcl).props('flat')
 
 nav()
+ui.add_css('''
+    i {
+        margin-right: -3px !important;
+        margin-left: -6px !important;
+    }''')
 
 def data():
     df=pl.read_parquet('C:\\Users\\smishra14\\OneDrive - Stryker\\data\\APAC.parquet')
     return df
 df=data()
+a.df1=df
 
 def lv(e):
     cow.options=list(df[e].unique())
     cow.value = df[e].unique()[0]
 
-def gbd1(e,df=df):
-    df=df.with_columns((pl.col('SALES_DATE').dt.month()).alias('month'))
-    df=df.with_columns((pl.col('SALES_DATE').dt.year()).alias('year'))
-    df1=df.filter(pl.col(lw.value)==e.value)
-    df1=df1.group_by([lw.value,'IBP Level 5','CatalogNumber','SALES_DATE','month','year']).sum()
+def gbd1(df=a.df1):
+    df1=df.clone()
+    try:
+        print(len(df1[['month']]))
+    except:
+        df1=df1.with_columns((pl.col('SALES_DATE').dt.month()).alias('month'))
+        df1=df1.with_columns((pl.col('SALES_DATE').dt.year()).alias('year'))
+    #try:
+    #    df1=df.filter(pl.col(lw.value)==e.value)
+    #    df1=df1.group_by([lw.value,'Franchise','Business Unit','IBP Level 5','CatalogNumber','SALES_DATE','month','year']).sum()
+    #except:
+    #    df1=df.filter(pl.col(pw.value)==e.value)
+    #print(df1)
     df1=df1.with_columns(pl.col('`Fcst Stat Final Rev').cast(pl.Int32()))
     df1=df1.with_columns(pl.col('`Act Orders Rev').cast(pl.Int32()))
     df1=df1.with_columns((pl.when(pl.col('SALES_DATE')<=datetime(today.year,today.month,1)-relativedelta(months=1)).then(pl.col('`Act Orders Rev')).otherwise(
@@ -64,10 +78,36 @@ def gbd1(e,df=df):
     a.df1=df1
     a.df=df
 
+def hs(e):
+    try:
+        print(len(a.df1[['month']]))
+    except:
+        df1=a.df1.with_columns((pl.col('SALES_DATE').dt.month()).alias('month'))
+        df1=df1.with_columns((pl.col('SALES_DATE').dt.year()).alias('year'))
+    df1=df1.filter(pl.col(lw.value)==e.value)
+    df1=df1.group_by([lw.value,'Franchise','Business Unit','IBP Level 5','CatalogNumber','SALES_DATE','month','year']).sum()
+    gbd1(df1)
+
+def phs(e):
+    try:
+        print(len(a.df1[['month']]))
+    except:
+        df1=a.df1.with_columns((pl.col('SALES_DATE').dt.month()).alias('month'))
+        df1=df1.with_columns((pl.col('SALES_DATE').dt.year()).alias('year'))
+    df1=a.df1.filter(pl.col(pw.value)==e.value)
+    gbd1(df1)
+
 def tmf(e):
     cow.options=df[e.value].unique().to_list()
-    cow._props={'label':e.value}
+    cow._props={'label':e.value,'with_input':True}
     cow.update()
+    r2.clear()
+    r3.clear()
+
+def pmf(e):
+    pvw.options=df[e.value].unique().to_list()
+    pvw._props={'label':e.value,'with_input':True}
+    pvw.update()
     r2.clear()
     r3.clear()
 
@@ -77,11 +117,9 @@ r2=ui.row()
 r3=ui.row()
 
 def rdf1(cat:str):
-    #print(cat)
-    lab.text = str(a.cat) + " - " + a.df.filter(pl.col('CatalogNumber')==cat)['Franchise'].unique()[0]
+    lab.text = str(a.cat) + " - "+ a.df.filter(pl.col('CatalogNumber')==cat)['Franchise'].unique()[0]
     a.gdf=a.df1.filter(pl.col('CatalogNumber')==cat)
     a.gdf=a.gdf.group_by(['month','year','SALES_DATE']).sum()
-    #print(a.gdf)
     a.pdf=a.gdf.pivot(index='year',columns='month',values='actwfcst',aggregate_function="sum")
     a.pdf=a.pdf[['year']+[str(i) for i in range(1,13)]]
     a.pdf=a.pdf.sort('year')
@@ -93,25 +131,40 @@ def rdf1(cat:str):
             pass
         #dfw=ui.aggrid.from_pandas(a.pdf,auto_size_columns=True,options={'editable':True}).on('cellValueChanged', lambda e: scf(e)).style('min-width:1250px;max-height:200px;margin-top:-3px')
         dfw=ui.aggrid({'columnDefs': [{"field":cn,"editable": True} for cn in a.pdf.columns], 'rowData': a.pdf.to_dicts()}).on('cellValueChanged', lambda e: scf(e)
-                                                                                                                ).style('min-width:1250px;max-height:200px;margin-top:-15px')
-    
+                                                                                                                ).style('min-width:1250px;max-height:200px;margin-top:-15px')   
     ll=[{'type': 'line', 'data': []},{'type': 'line', 'data': []}]
     ll.extend([{'type':'bar','name':i,'data': []} for i in a.df['year'].unique().to_list()])
     r2.clear()
     k=2
     with r2:
-        a.ch1=ui.echart({'xAxis':{'data':a.df['month'].unique().to_list()},'yAxis': {},'series': ll}).style('height:390px;width:950px; margin-top:3px')
+        a.ch1=ui.echart({'xAxis':{'data':a.df['month'].unique().to_list()},'yAxis': {},'series': ll}).style('height:360px;width:780px; margin-top:13px; margin-left:0px; margin-right:6px')
         a.ch1.options['series'][0]['data']= a.gdf.filter(pl.col('SALES_DATE')>=datetime(today.year,today.month,1)).sort('month',descending=False)['`Fcst DF Final Rev'].to_list()
         a.ch1.options['series'][0]['name']='DF'
         a.ch1.options['series'][1]['data']= a.gdf.filter(pl.col('SALES_DATE')>=datetime(today.year,today.month,1)).sort('month',descending=False)['`Fcst Stat Final Rev'].to_list()
         a.ch1.options['series'][1]['name']='Stat'
         a.ch1.options['tooltip']={}
         a.ch1.options['legend']={}
+        a.ch1.options['grid']={'right':5,'left':51,'bottom':34,'top':39}
+        a.ch1.options['title']={'text':a.cat}
+        a.ch1.options['toolbox']={'show': 'true','feature': { 'saveAsImage': {}}}
         for y in a.gdf['year'].unique():
             a.ch1.options['series'][k]['data']= a.gdf.filter(pl.col('year')==y).group_by('month').sum().sort('month',descending=False)['`Act Orders Rev'].to_list()
             a.ch1.options['series'][k]['name']=y
             k+=1
-        #a.ch1.update()
+        a.ch2=ui.echart({'xAxis':{'type':'time','axisLabel': {'formatter': '{MMM} {yy}'}},'yAxis': {},'series':[{'type': 'line', 'data': []},{'type': 'line', 'data': []},{'type': 'line', 'data': [],'markLine':{'itemStyle':{'color':'grey'},'data':[]}}] }).style(
+            'height:360px;width:650px; margin-top:13px;margin-right:-6px;')
+        a.ch2.options['series'][0]['data']= [[i['SALES_DATE'],i['`Fcst DF Final Rev']] for i in a.gdf.filter(pl.col('SALES_DATE')>=datetime(today.year,today.month,1)).sort('SALES_DATE',descending=False).iter_rows(named=True)]
+        a.ch2.options['series'][0]['name']='DF'
+        a.ch2.options['series'][1]['data']= [[i['SALES_DATE'],i['`Fcst Stat Final Rev']] for i in a.gdf.filter(pl.col('SALES_DATE')>=datetime(today.year,today.month,1)).sort('SALES_DATE',descending=False).iter_rows(named=True)]
+        a.ch2.options['series'][1]['name']='Stat'
+        a.ch2.options['series'][2]['data']= [[i['SALES_DATE'],i['`Act Orders Rev']] for i in a.gdf.sort('SALES_DATE',descending=False).iter_rows(named=True)]
+        a.ch2.options['series'][2]['markLine']['data']= [{'xAxis':(datetime(today.year,today.month,1)+relativedelta(months=2)).isoformat(timespec="hours"),'name':'Lag2 month'}]
+        a.ch2.options['series'][2]['name']='Orders'
+        a.ch2.options['tooltip']={'trigger':'axis'}
+        a.ch2.options['toolbox']={'show': 'true','feature': { 'saveAsImage': {}}}
+        a.ch2.options['legend']={}
+        a.ch2.options['title']={'text':a.cat}
+        a.ch2.options['grid']={'right':0,'left':51,'bottom':34,'top':39}
 
 def rdf(e):
     a.count = int(ic.value)
@@ -140,14 +193,16 @@ def pf(e):
     rdf1(a.cat)
 
 with r1:
-    ic = ui.number(label="Rank",step=1,value=0,on_change=rdf).style('min-width: 60px;max-width: 60px; margin-top:-14px')
-    prev = ui.button(icon='arrow_drop_up',text='Prev',on_click=pf)
-    next = ui.button(icon='arrow_drop_down',text='Next',on_click=nf)
-    lw = ui.select(label='Location',value='Region',options=['Area','Region','Country'],on_change=tmf).style('min-width: 140px; margin-top:-14px')
-    cow = ui.select(label=lw.value,options=list(df[lw.value].unique()),on_change=gbd1).style('min-width: 160px; margin-top:-14px')
+    ic = ui.number(label="Rank",step=1,value=0,on_change=rdf).style('min-width: 55px;max-width: 55px; margin-top:-14px')
+    prev = ui.button(icon='arrow_drop_up',text='Prev',on_click=pf).style('min-width: 63px;max-width: 63px; padding-left:0px;padding-right:0px; margin-left:0px; margin-right:0px')
+    next = ui.button(icon='arrow_drop_down',text='Next',on_click=nf).style('min-width: 63px;max-width: 63px; padding-left:0px;padding-right:0px; margin-left:0px; margin-right:0px')
+    lw = ui.select(label='Location',value='Region',with_input=True,options=['Area','Region','Country'],on_change=tmf).style('min-width: 100px;max-width: 100px; margin-top:-14px')
+    cow = ui.select(label=lw.value,options=list(df[lw.value].unique()),on_change=hs,with_input=True).style('min-width: 160px; margin-top:-14px')
+    pw = ui.select(label='Product',value='IBP Level 5',with_input=True,options=['Franchise','Business Unit','IBP Level 5'],on_change=pmf).style('min-width: 120px;max-width: 120px; margin-top:-14px')
+    pvw = ui.select(label=pw.value,options=list(df[pw.value].unique()),on_change=phs,with_input=True).style('min-width: 160px; margin-top:-14px')
     eb = ui.button(text="Export",icon='file_download')
-    catw = ui.select(label="CatalogNumber",options=list(df['CatalogNumber'].unique()),on_change=scat,with_input=True).style('min-width: 160px; margin-top:-14px')
-    lab = ui.label("        ").style('font-size:1.5em;width: 350px; margin-top:3px')
+    catw = ui.select(label="CatalogNumber",options=list(df['CatalogNumber'].unique()),on_change=scat,with_input=True).style('min-width: 110px; margin-top:-14px')
+    lab = ui.label("        ").style('font-size:1.5em;width: 360px; margin-top:3px')
 #gbd1(e=lw)
 
 def scf(e):
