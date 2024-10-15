@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}ML App{% endblock %}
+{% block content %}
+<div class="flex gap-3 px-3 py-3">
+    <a href="/reg" class="hover:bg-blue-100 hover:scale-[103%] transition-all">
+    <div class="max-w-sm border border-gray-200 rounded shadow-lg" style="height: 550px;">
+    <img class="w-full rounded-t" src="/static/reg.png" alt="Regression" style="height: 250px; object-fit: cover">
+      <h3 class="font-extrabold text-2xl mb-2 mt-3 px-3 pb-5 text-blue-700">Regression Example</h3>
+      <p class="text-grey-200 px-3 pb-5">
+        Regression analysis is a powerful statistical tool used to examine the relationship between a dependent variable and one or more independent variables.
+         This technique helps in understanding how the typical value of the dependent variable changes when any one of the independent variables is varied, while
+          the other independent variables are held fixed.
+      </p></div></a>
+      <a href="/clf" class="hover:bg-blue-100 hover:scale-[103%] transition-all">
+      <div class="max-w-sm border border-gray-200 rounded shadow-lg" style="height: 550px;">
+        <img class="w-full rounded-t" src="/static/cl.jpeg" alt="Classification" style="height: 250px; object-fit: cover">
+          <h3 class="font-extrabold text-2xl mb-2 mt-3 px-3 pb-5 text-blue-700">Classification Example</h3>
+          <span class="bg-blue-400 rounded-full ml-4 px-3 text-grey-700">#WIP</span>
+          <p class="text-grey-200 px-3 pt-2 pb-5">
+            Classification analysis is a fundamental technique in data mining and machine learning used to categorize data into predefined classes or groups.
+             The primary goal is to build a model that can accurately predict the class label of new, unseen instances based on their features.
+          </p></div></a>
+    <a href="/fc" class="hover:bg-blue-100 hover:scale-[103%] transition-all">
+    <div class="max-w-sm border border-gray-200 rounded shadow-lg" style="height: 550px;">
+        <img class="w-full rounded-t" src="/static/fc.jpeg" alt="Forecasting" style="height: 250px; object-fit: cover">
+        <h3 class="font-extrabold text-2xl mb-2 mt-3 px-3 pb-5 text-blue-700">Forecasting Example</h3>
+        <p class="text-grey-200 px-3 pt-2 pb-5">
+          Time series forecasting is a statistical technique used to predict future values based on previously observed data points. This method is 
+          particularly useful when data is collected over time at regular intervals, such as daily stock prices, monthly sales figures, or annual rainfall measurements.
+        </p></div></a>
+    <a href="/clt" class="hover:bg-blue-100 hover:scale-[103%] transition-all">
+        <div class="max-w-sm border border-gray-200 rounded shadow-lg" style="height: 550px;">
+        <img class="w-full rounded-t" src="/static/img.jpeg" alt="Clusturing" style="height: 250px; object-fit: cover">
+        <h3 class="font-extrabold text-2xl mb-2 mt-3 px-3 pb-5 text-blue-700">Clusturing Example</h3>
+        <span class="bg-blue-400 rounded-full ml-4 px-3 text-grey-700">#WIP</span>
+        <p class="text-grey-200 px-3 pt-2 pb-5">
+          Clustering analysis is a technique used in data mining and machine learning to group similar data points into clusters based on their 
+          characteristics. The primary goal is to ensure that data points within the same cluster are more similar to each other than to those in 
+          other clusters.
+        </p></div></a>
+    </div>
+{% endblock %}
