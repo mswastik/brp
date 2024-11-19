@@ -11,6 +11,7 @@ import xgboost as xgb
 from sklearn.linear_model import LinearRegression
 from mlforecast.lag_transforms import ExpandingMean, RollingMean, SeasonalRollingMean
 from mlforecast.target_transforms import Differences
+from typing import List, Tuple, Dict
 
 alt.data_transformers.disable_max_rows()
 alt.themes.enable('powerbi')
@@ -44,6 +45,8 @@ def nav():
             ui.button('Detail',color=None).classes(navcl).props('flat')
         with ui.link(target='/sql'):
             ui.button('SQL',color=None).classes(navcl).props('flat')
+        with ui.link(target='/chat'):
+            ui.button('Chat',color=None).classes(navcl).props('flat')
 
 nav()
 ui.add_css('''
@@ -123,8 +126,8 @@ r3=ui.row().style(f'width:99dvw')
 
 def rdf1(cat:str):
     a.gdf=a.df1.filter(pl.col('CatalogNumber')==a.cat)
-    a.gdf=a.gdf.group_by(list(set([a.lh,'Franchise','Business Unit',a.ph,'CatalogNumber','SALES_DATE','month','year']))).sum()
-    lab.text = str(a.cat) + " - "+ a.gdf['Franchise'].unique()[0]
+    a.gdf=a.gdf.group_by(list(set([a.lh,'Franchise','Business Unit','IBP Level 5',a.ph,'CatalogNumber','SALES_DATE','month','year']))).sum()
+    lab.text = str(a.cat) + " - "+ a.gdf['IBP Level 5'].unique()[0]+ " - "+ a.gdf['Franchise'].unique()[0]
     a.pdf=a.gdf.pivot(index='year',columns='month',values='actwstfc',aggregate_function="sum")
     a.pdf=a.pdf[['year']+[str(i) for i in range(1,13)]]
     a.pdf=a.pdf.sort('year')
@@ -257,7 +260,7 @@ with r1:
     eb = ui.button(text="Export",icon='file_download')
     catw = ui.select(label="CatalogNumber",options=list(df['CatalogNumber'].unique()),on_change=scat,with_input=True).style('min-width: 110px; margin-top:-14px')
     fcb = ui.button(text="Forecast",on_click=genfc)
-    lab = ui.label("        ").style('font-size:1.5em;width: 360px; margin-top:3px')
+    lab = ui.label("        ").style('font-size:1.5em;width: 660px; margin-top:3px')
 #gbd1(e=lw)
 
 def scf(e):
@@ -341,4 +344,56 @@ def detail():
                 ui.date(datetime(today.year,today.month,1)-relativedelta(months=1)).bind_value(date)
         cow= ui.select(label=lw.value,options=list(df[lw.value].unique().sort()),on_change=cfg,with_input=True).style('min-width: 160px; margin-top:-14px')
 
-ui.run(title="Forecast Review",binding_refresh_interval=1,reconnect_timeout=70,uvicorn_reload_includes='ngbrp.py')
+
+#import imageio as iio
+#av = iio.imread("YHO.png")
+#from uuid import uuid4
+#import openai
+import google.generativeai as genai
+import markdown2
+
+with open('key.txt') as f:
+    api = f.read()
+genai.configure(api_key=api)
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+messages: List = []
+
+@ui.refreshable
+def chat(own_id='user'):
+    if messages:
+        for ind in messages:
+            ui.chat_message(text=ind['content'], sent=own_id== ind['role'], stamp=ind['stamp'], avatar=ind['avatar'],text_html=True).classes('font-sans text-base text-slate-600 leading-relaxed')
+    else:
+        ui.label('No messages yet').classes('mx-auto my-36')
+    #ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+
+@ui.page('/chat')
+def main():
+    nav()
+    async def comp(PROMPT):
+        chat.refresh()
+        response = model.generate_content(PROMPT)
+        p1=markdown2.markdown(response.text)
+        messages.append({'role':'system','avatar':f'https://robohash.org/system?bgset=bg2','content':p1,'stamp': datetime.now().strftime('%X')})
+        chat.refresh()
+
+    async def send() -> None:
+        messages.append({'role':'user','avatar':f'https://robohash.org/user?bgset=bg2','content': text.value,'stamp' : datetime.now().strftime('%X')})
+        prompt=text.value
+        text.value = ''
+        chat.refresh()
+        await comp(prompt)
+
+    #ui.add_css(r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}')
+    with ui.footer().classes('bg-white'), ui.column().classes('w-4/5 mx-auto my-6'):
+        with ui.row().classes('w-4/5 no-wrap items-center'):
+            with ui.avatar().on('click', lambda: ui.navigate.to(main)):
+                ui.image(f'https://robohash.org/user?bgset=bg2')
+            text = ui.input(placeholder='Message').on('keydown.enter', send).props('rounded outlined input-class=mx-3').classes('flex-grow')
+
+    #await ui.context.client.connected()  # chat_messages(...) uses run_javascript which is only possible after connecting
+    with ui.column().classes('w-4/5 mx-auto items-stretch'):
+        chat('user')
+
+ui.run(title="Forecast Review",binding_refresh_interval=1,reconnect_timeout=170,uvicorn_reload_includes='ngbrp.py')
