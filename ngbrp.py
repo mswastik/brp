@@ -1,5 +1,5 @@
 import pandas as pd
-from nicegui import ui
+from nicegui import ui, run
 import altair as alt
 from datetime import datetime,date
 from dateutil.relativedelta import relativedelta
@@ -344,11 +344,6 @@ def detail():
                 ui.date(datetime(today.year,today.month,1)-relativedelta(months=1)).bind_value(date)
         cow= ui.select(label=lw.value,options=list(df[lw.value].unique().sort()),on_change=cfg,with_input=True).style('min-width: 160px; margin-top:-14px')
 
-
-#import imageio as iio
-#av = iio.imread("YHO.png")
-#from uuid import uuid4
-#import openai
 import google.generativeai as genai
 import markdown2
 
@@ -363,18 +358,28 @@ messages: List = []
 def chat(own_id='user'):
     if messages:
         for ind in messages:
-            ui.chat_message(text=ind['content'], sent=own_id== ind['role'], stamp=ind['stamp'], avatar=ind['avatar'],text_html=True).classes('font-sans text-base text-slate-600 leading-relaxed')
+            ui.chat_message(text=ind['content'], sent=own_id== ind['role'], stamp=ind['stamp'], avatar=ind['avatar'],text_html=True).classes('font-sans text-base leading-relaxed')
     else:
         ui.label('No messages yet').classes('mx-auto my-36')
-    #ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+    ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
 
 @ui.page('/chat')
-def main():
+async def main():
     nav()
     async def comp(PROMPT):
-        chat.refresh()
-        response = model.generate_content(PROMPT)
-        p1=markdown2.markdown(response.text)
+        sta.set_visibility(True)
+        sp.visible=True
+        sta.update()
+        sp.update()
+        response = await run.io_bound(model.generate_content,PROMPT)
+        p1=markdown2.markdown(response.text, extras=["footnotes","tables"])
+        p1='''<style> h2,h3,h4,h5,p,div,ul,li,table,ol,th,td {padding:5px;}
+                ul, ol, li, table {padding:5px;} 
+                ul, ol {padding-bottom:8px;}
+                table, th, td {
+                border: 1px solid black;
+                border-collapse: collapse;}
+                </style>'''+p1
         messages.append({'role':'system','avatar':f'https://robohash.org/system?bgset=bg2','content':p1,'stamp': datetime.now().strftime('%X')})
         chat.refresh()
 
@@ -384,15 +389,23 @@ def main():
         text.value = ''
         chat.refresh()
         await comp(prompt)
+        sta.set_visibility(False)
+        sp.visible=False
+        sta.update()
+        sp.update()
 
     #ui.add_css(r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}')
-    with ui.footer().classes('bg-white'), ui.column().classes('w-4/5 mx-auto my-6'):
+    with ui.footer().classes('bg-white').style('margin-bottom:6px;padding-top:5px'), ui.column().classes('w-4/5 mx-auto').style('margin-bottom:6px;padding-top:5px'):
+        with ui.row().classes('w-4/5 no-wrap items-center').style('max-height:15px'):
+            sta = ui.label(f'{model.model_name} is responding').classes('text-slate-500')
+            sp = ui.spinner('dots', size='lg', color='red')
+            sta.visible, sp.visible=False,False
         with ui.row().classes('w-4/5 no-wrap items-center'):
             with ui.avatar().on('click', lambda: ui.navigate.to(main)):
                 ui.image(f'https://robohash.org/user?bgset=bg2')
             text = ui.input(placeholder='Message').on('keydown.enter', send).props('rounded outlined input-class=mx-3').classes('flex-grow')
 
-    #await ui.context.client.connected()  # chat_messages(...) uses run_javascript which is only possible after connecting
+    await ui.context.client.connected()  # chat_messages(...) uses run_javascript which is only possible after connecting
     with ui.column().classes('w-4/5 mx-auto items-stretch'):
         chat('user')
 
